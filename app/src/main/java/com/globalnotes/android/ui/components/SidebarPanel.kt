@@ -27,7 +27,8 @@ fun SidebarPanel(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxHeight()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
+            .statusBarsPadding()
+            .padding(24.dp)
     ) {
         // Header
         Row(

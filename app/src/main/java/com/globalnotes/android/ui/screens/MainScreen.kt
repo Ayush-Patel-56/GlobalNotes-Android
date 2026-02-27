@@ -1,9 +1,8 @@
 package com.globalnotes.android.ui.screens
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import kotlinx.coroutines.launch
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
@@ -20,10 +19,17 @@ fun MainScreen() {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val isTablet = windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
-    if (isTablet) {
-        TabletLayout()
-    } else {
-        PhoneLayout()
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        if (isTablet) {
+            TabletLayout()
+        } else {
+            PhoneLayout()
+        }
     }
 }
 
@@ -63,7 +69,10 @@ fun PhoneLayout() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(modifier = Modifier.width(300.dp)) {
+            ModalDrawerSheet(
+                modifier = Modifier.width(300.dp),
+                windowInsets = WindowInsets.statusBars
+            ) {
                 SidebarPanel(modifier = Modifier.fillMaxSize())
             }
         }
@@ -74,14 +83,17 @@ fun PhoneLayout() {
             listPane = {
                 NotesListPanel(
                     onNoteClick = { navigator.navigateTo(ListDetailPaneScaffoldRole.Detail) },
-                    onMenuClick = { /* Open drawer */ }
+                    onMenuClick = { 
+                        scope.launch { drawerState.open() }
+                    }
                 )
             },
             detailPane = {
                 EditorPanel(
                     onBackClick = { navigator.navigateBack() }
                 )
-            }
+            },
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

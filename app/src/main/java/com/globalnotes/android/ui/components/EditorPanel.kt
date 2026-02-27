@@ -10,9 +10,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -20,6 +22,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import com.globalnotes.android.ui.theme.*
 
 @Composable
@@ -27,72 +32,124 @@ fun EditorPanel(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {}
 ) {
-    var title by remember { mutableStateOf("Product Vision 2024") }
-    var content by remember { mutableStateOf("The future of document collaboration is here. We need to focus on a truly seamless experience across all devices.\n\nKey Pillars:\n1. Performance first\n2. AI-driven drafting\n3. Beautiful typography\n\nLet's build something amazing.") }
+    var title by remember { mutableStateOf(TextFieldValue("Product Vision 2024")) }
+    var content by remember { mutableStateOf(TextFieldValue("The future of document collaboration is here. We need to focus on a truly seamless experience across all devices.\n\nKey Pillars:\n1. Performance first\n2. AI-driven drafting\n3. Beautiful typography\n\nLet's build something amazing.")) }
     var selectedBackground by remember { mutableStateOf(StylePlain) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        // Top Toolbar
-        EditorTopBar(onBackClick)
+    val wordCount by remember {
+        derivedStateOf {
+            content.text.split("\\s+".toRegex()).filter { it.isNotEmpty() }.size
+        }
+    }
 
-        // Editor Canvas
+    val scrollState = rememberScrollState()
+
+    Scaffold(
+        topBar = { EditorTopBar(onBackClick) },
+        bottomBar = {
+            Column {
+                FormattingToolbar(onBackgroundSelect = { selectedBackground = it })
+                Spacer(modifier = Modifier.navigationBarsPadding())
+            }
+        },
+        containerColor = Color.Transparent,
+        modifier = modifier.fillMaxSize().imePadding()
+    ) { paddingValues ->
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
+                .padding(paddingValues)
                 .background(selectedBackground)
         ) {
-            // Background Canvas (Lines/Grid)
             CanvasBackground(style = selectedBackground)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 48.dp, vertical = 32.dp)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                // Editable Title
-                BasicTextField(
+                // Title Area
+                TextField(
                     value = title,
                     onValueChange = { title = it },
-                    textStyle = MaterialTheme.typography.headlineLarge.copy(
+                    textStyle = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
                         color = if (selectedBackground == Color.Black) Color.White else Color.Black
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { 
+                        Text(
+                            "Note Title", 
+                            style = MaterialTheme.typography.headlineMedium, 
+                            color = (if (selectedBackground == Color.Black) Color.White else Color.Black).copy(alpha = 0.3f)
+                        ) 
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = if (selectedBackground == Color.Black) Color.White else MaterialTheme.colorScheme.primary
+                    )
                 )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("/ ${content.split("\\\\s+".toRegex()).size} words", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("Feb 27, 2026", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("Saved ✓", style = MaterialTheme.typography.labelSmall, color = Color.Gray.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.AccessTime, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(12.dp), 
+                        tint = if (selectedBackground == Color.Black) Color.LightGray else Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Feb 27 • 12:45 PM", 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = if (selectedBackground == Color.Black) Color.LightGray else Color.Gray
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = (if (selectedBackground == Color.Black) Color.White else Color.Black).copy(alpha = 0.1f)
+                )
 
-                // Document Body
-                BasicTextField(
+                // Body text
+                TextField(
                     value = content,
                     onValueChange = { content = it },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        lineHeight = 26.sp,
                         color = if (selectedBackground == Color.Black) Color.White else Color.Black
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { 
+                        Text(
+                            "Start writing...", 
+                            color = (if (selectedBackground == Color.Black) Color.White else Color.Black).copy(alpha = 0.3f)
+                        ) 
+                    },
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = if (selectedBackground == Color.Black) Color.White else MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "$wordCount words",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = (if (selectedBackground == Color.Black) Color.White else Color.Black).copy(alpha = 0.4f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
         }
-
-        // Formatting Toolbar (Bottom)
-        FormattingToolbar(
-            onBackgroundSelect = { selectedBackground = it }
-        )
     }
 }
 
